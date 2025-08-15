@@ -55,9 +55,9 @@ echo -e "${GREEN}✓ 检测到 $PYTHON_VERSION${NC}"
 echo -e "${YELLOW}检查依赖...${NC}"
 if [[ $IS_TERMUX == true ]]; then
     # Termux使用国内镜像
-    pip install -r requirements_termux.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
+    python3 -m pip install -r requirements_termux.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 else
-    pip install -r requirements.txt
+    python3 -m pip install -r requirements.txt
 fi
 
 if [[ $? -ne 0 ]]; then
