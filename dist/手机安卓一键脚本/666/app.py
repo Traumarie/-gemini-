@@ -716,7 +716,7 @@ def main():
         print("2. 如需从外部访问，请确保端口转发已正确配置")
         print("3. 建议使用 'termux-wake-lock' 保持服务运行")
         print("4. 建议使用 'termux-battery-status' 监控电池状态")
-        print("5. 可以使用 'nohup python app.py &' 在后台运行服务")
+        print("5. 可以使用 'nohup python3 app.py &' 在后台运行服务")
     
     # 导入uvicorn并启动服务
     try:

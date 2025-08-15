@@ -60,8 +60,8 @@ check_environment() {
     fi
     
     # 检查Python
-    if ! command -v python &> /dev/null; then
-        print_error "Python未安装，请运行: pkg install python"
+    if ! command -v python3 &> /dev/null; then
+        print_error "Python未安装，请运行: pkg install python3"
         exit 1
     fi
     
@@ -89,9 +89,9 @@ check_dependencies() {
     fi
     
     # 检查依赖是否已安装
-    if ! python -c "import fastapi" 2>/dev/null; then
+    if ! /data/data/com.termux/files/usr/bin/python3 -c "import fastapi" 2>/dev/null; then
         print_info "正在安装Python依赖..."
-        pip install -r "$PROJECT_DIR/requirements.txt" --no-cache-dir
+        /data/data/com.termux/files/usr/bin/python3 -m pip install -r "$PROJECT_DIR/requirements.txt" --no-cache-dir
         if [[ $? -eq 0 ]]; then
             print_info "依赖安装完成"
         else
@@ -157,7 +157,7 @@ start_service() {
     cd "$PROJECT_DIR"
     
     print_info "启动服务中..."
-    nohup python app.py > "$LOG_DIR/llm-proxy.log" 2>&1 &
+    nohup /data/data/com.termux/files/usr/bin/python3 app.py > "$LOG_DIR/llm-proxy.log" 2>&1 &
     
     local pid=$!
     echo $pid > "$PID_FILE"
