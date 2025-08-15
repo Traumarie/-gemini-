@@ -292,11 +292,11 @@ show_help() {
     echo "用法: $0 [命令]"
     echo
     echo "命令:"
-    echo "  start          启动服务"
-    echo "  stop           停止服务"
-    echo "  restart        重启服务"
-    echo "  status         查看服务状态"
-    echo "  logs [行数]    查看日志 (默认50行)"
+    echo "   chmod +x start-termux.sh         首先运行这个"
+    echo "      ./start-termux.sh start       然后再运行这个"
+    echo "  QQ 1033083986"
+    echo "  https://github.com/adc666sav466/-gemini-"
+    echo "  禁止商用"
     echo "  install        安装依赖"
     echo "  help           显示此帮助信息"
     echo
