@@ -271,137 +271,26 @@ textarea.form-control {
     margin-right: 10px;
 }
 
-/* 响应式设计 - 移动端优化 */
+/* 响应式设计 */
 @media (max-width: 768px) {
-    :root {
-        --sidebar-width: 100%;
-        --top-bar-height: 50px;
-        --bottom-bar-height: 60px;
-    }
-    
     .sidebar {
         width: 100%;
         height: auto;
         position: relative;
-        border-radius: 0;
-    }
-    
-    .sidebar-header {
-        padding: 15px;
-    }
-    
-    .sidebar-header h4 {
-        font-size: 1.1rem;
-    }
-    
-    .sidebar .nav-link {
-        padding: 10px 15px;
-        font-size: 0.9rem;
     }
     
     .main-content {
         margin-left: 0;
-        height: calc(100vh - var(--top-bar-height) - var(--bottom-bar-height));
-    }
-    
-    .top-bar {
-        padding: 10px 15px;
-        height: var(--top-bar-height);
-    }
-    
-    .top-bar h5 {
-        font-size: 1rem;
     }
     
     .bottom-bar {
         flex-direction: column;
         height: auto;
         padding: 10px;
-        gap: 10px;
     }
     
     .bottom-bar > div {
-        margin-bottom: 0;
-        width: 100%;
-    }
-    
-    .bottom-bar .btn {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    
-    .card {
-        margin-bottom: 15px;
-    }
-    
-    .card-body {
-        padding: 15px;
-    }
-    
-    .form-control {
-        font-size: 16px; /* 防止iOS缩放 */
-    }
-    
-    .btn {
-        font-size: 0.9rem;
-        padding: 10px 15px;
-    }
-    
-    .notification {
-        min-width: 280px;
-        max-width: 90%;
-        right: 5%;
-    }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 375px) {
-    .sidebar-header h4 {
-        font-size: 1rem;
-    }
-    
-    .sidebar .nav-link {
-        padding: 8px 12px;
-        font-size: 0.85rem;
-    }
-    
-    .card-header h5 {
-        font-size: 1rem;
-    }
-    
-    .form-label {
-        font-size: 0.9rem;
-    }
-}
-
-/* 触摸设备优化 */
-@media (hover: none) and (pointer: coarse) {
-    .btn:hover {
-        background-color: initial;
-    }
-    
-    .nav-link:hover {
-        background-color: initial;
-    }
-    
-    .sidebar .nav-link:active {
-        background-color: var(--primary-color);
-    }
-    
-    .btn:active {
-        transform: scale(0.98);
-    }
-}
-
-/* 横屏模式优化 */
-@media (max-height: 500px) and (orientation: landscape) {
-    .sidebar {
-        height: 100vh;
-        position: fixed;
-    }
-    
-    .main-content {
-        margin-left: var(--sidebar-width);
+        margin-bottom: 10px;
     }
 }
 

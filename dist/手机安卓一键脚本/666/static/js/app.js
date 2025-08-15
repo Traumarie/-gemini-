@@ -1,81 +1,83 @@
-// LLM代理服务 - Web版 JavaScript
+// LLM代理服务 - Termux版 JavaScript
+// 专为Android Termux环境优化
 
 class LLMProxyApp {
     constructor() {
-        this.socket = null;
         this.currentConfig = null;
         this.init();
     }
 
     init() {
-        this.initSocket();
         this.initEventListeners();
         this.loadConfig();
         this.updateWebUrl();
+        this.checkTermuxEnvironment();
     }
 
-    initSocket() {
-        // 连接Socket.IO
-        this.socket = io();
+    checkTermuxEnvironment() {
+        // 检测是否在Termux环境中
+        const isTermux = /termux/i.test(navigator.userAgent) ||
+                        window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1';
         
-        this.socket.on('connect', () => {
-            console.log('Socket连接成功');
-            this.showNotification('连接成功', 'success');
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('Socket连接断开');
-            this.showNotification('连接断开', 'error');
-        });
-
-        this.socket.on('server_status', (data) => {
-            this.updateServerStatus(data);
-        });
+        if (isTermux) {
+            document.body.classList.add('termux-environment');
+            console.log('Termux环境检测成功');
+        }
     }
 
     initEventListeners() {
-        // 侧边栏导航
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
+        // 移动端导航
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.switchTab(link.dataset.tab);
+                this.switchTab(btn.dataset.tab);
             });
         });
 
         // 按钮事件
-        document.getElementById('save-config-btn').addEventListener('click', () => {
-            this.saveConfig();
-        });
+        const saveBtn = document.getElementById('save-config-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.saveConfig();
+            });
+        }
 
-        document.getElementById('reload-config-btn').addEventListener('click', () => {
-            this.loadConfig();
-        });
+        const reloadBtn = document.getElementById('reload-config-btn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => {
+                this.loadConfig();
+            });
+        }
 
-        document.getElementById('start-server-btn').addEventListener('click', () => {
-            this.startServer();
-        });
+        // 快速启动按钮
+        const quickStartBtn = document.getElementById('quick-start-btn');
+        if (quickStartBtn) {
+            quickStartBtn.addEventListener('click', () => {
+                this.startServer();
+            });
+        }
 
-        document.getElementById('stop-server-btn').addEventListener('click', () => {
-            this.stopServer();
-        });
+        const quickStopBtn = document.getElementById('quick-stop-btn');
+        if (quickStopBtn) {
+            quickStopBtn.addEventListener('click', () => {
+                this.stopServer();
+            });
+        }
 
-        // 实时配置更新
-        this.setupRealTimeConfigUpdate();
+        // 简化实时配置更新，只在移动端使用
+        this.setupMobileConfigUpdate();
     }
 
-    setupRealTimeConfigUpdate() {
-        // 为所有配置输入框添加实时更新事件
-        const configInputs = [
-            'api-port', 'api-host', 'web-port', 'web-host',
-            'api-key', 'min-length', 'timeout', 'base-url',
-            'group1-keys', 'group2-keys'
-        ];
-
-        configInputs.forEach(inputId => {
+    setupMobileConfigUpdate() {
+        // 为关键配置输入框添加实时更新事件
+        const criticalInputs = ['api-key', 'api-port', 'api-host'];
+        
+        criticalInputs.forEach(inputId => {
             const element = document.getElementById(inputId);
             if (element) {
-                element.addEventListener('input', () => {
-                    this.debounce(this.saveConfig.bind(this), 1000)();
+                element.addEventListener('change', () => {
+                    this.debounce(this.saveConfig.bind(this), 2000)();
                 });
             }
         });
@@ -95,16 +97,22 @@ class LLMProxyApp {
 
     async switchTab(tabName) {
         // 更新导航状态
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.classList.remove('active');
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
         });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
 
         // 切换内容
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+        const targetTab = document.getElementById(`${tabName}-tab`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
     }
 
     async loadConfig() {
@@ -125,26 +133,27 @@ class LLMProxyApp {
     }
 
     updateConfigUI(data) {
-        // 更新服务器配置
+        // 更新服务器配置 - 简化版本
         if (data.server) {
-            document.getElementById('api-port').value = data.server.port;
-            document.getElementById('api-host').value = data.server.host;
-            document.getElementById('web-port').value = data.server.web_port;
-            document.getElementById('web-host').value = data.server.web_host;
-            document.getElementById('api-key').value = data.server.api_key;
-            document.getElementById('min-length').value = data.server.min_response_length;
-            document.getElementById('timeout').value = data.server.request_timeout;
+            this.updateInputValue('api-port', data.server.port);
+            this.updateInputValue('api-host', data.server.host);
+            this.updateInputValue('api-key', data.server.api_key);
+            this.updateInputValue('min-length', data.server.min_response_length);
+            this.updateInputValue('timeout', data.server.request_timeout);
+            this.updateInputValue('base-url', data.base_url);
         }
 
-        // 更新基础URL
-        if (data.base_url) {
-            document.getElementById('base-url').value = data.base_url;
-        }
-
-        // 更新API密钥
+        // 更新API密钥 - 简化显示
         if (data.api_keys) {
-            document.getElementById('group1-keys').value = data.api_keys.group1.join('\n');
-            document.getElementById('group2-keys').value = data.api_keys.group2.join('\n');
+            this.updateInputValue('group1-keys', data.api_keys.group1.join('\n'));
+            this.updateInputValue('group2-keys', data.api_keys.group2.join('\n'));
+        }
+    }
+
+    updateInputValue(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.value = value;
         }
     }
 
@@ -166,8 +175,18 @@ class LLMProxyApp {
 
             const result = await response.json();
             if (result.success) {
-                this.showNotification('配置保存成功', 'success');
+                // 显示更详细的成功消息
+                const message = result.message || '配置保存成功';
+                this.showNotification(message, 'success');
                 this.currentConfig = config;
+                this.updateApiKeyDisplay();
+                
+                // 如果保存的是API密钥，显示额外提示
+                if (config.api_keys && (config.api_keys.group1.length > 0 || config.api_keys.group2.length > 0)) {
+                    setTimeout(() => {
+                        this.showNotification('API密钥已更新，新的请求将立即使用新密钥', 'info');
+                    }, 1000);
+                }
             } else {
                 throw new Error(result.error || '保存配置失败');
             }
@@ -180,31 +199,45 @@ class LLMProxyApp {
     getConfigFromUI() {
         return {
             server: {
-                port: parseInt(document.getElementById('api-port').value),
-                host: document.getElementById('api-host').value,
-                web_port: parseInt(document.getElementById('web-port').value),
-                web_host: document.getElementById('web-host').value,
-                api_key: document.getElementById('api-key').value,
-                min_response_length: parseInt(document.getElementById('min-length').value),
-                request_timeout: parseInt(document.getElementById('timeout').value)
+                port: this.getIntValue('api-port', 8080),
+                host: this.getTextValue('api-host', '0.0.0.0'),
+                web_port: this.getIntValue('api-port', 8080), // 简化：使用相同端口
+                web_host: this.getTextValue('api-host', '0.0.0.0'),
+                api_key: this.getTextValue('api-key', '123'),
+                min_response_length: this.getIntValue('min-length', 300),
+                request_timeout: this.getIntValue('timeout', 120)
             },
             api_keys: {
-                group1: document.getElementById('group1-keys').value
-                    .split('\n')
-                    .map(key => key.trim())
-                    .filter(key => key.length > 0),
-                group2: document.getElementById('group2-keys').value
-                    .split('\n')
-                    .map(key => key.trim())
-                    .filter(key => key.length > 0)
+                group1: this.getTextAreaValue('group1-keys'),
+                group2: this.getTextAreaValue('group2-keys')
             },
-            base_url: document.getElementById('base-url').value
+            base_url: this.getTextValue('base-url', 'https://generativelanguage.googleapis.com/v1beta')
         };
+    }
+
+    getIntValue(elementId, defaultValue) {
+        const element = document.getElementById(elementId);
+        return element ? parseInt(element.value) || defaultValue : defaultValue;
+    }
+
+    getTextValue(elementId, defaultValue) {
+        const element = document.getElementById(elementId);
+        return element ? element.value : defaultValue;
+    }
+
+    getTextAreaValue(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return [];
+        
+        return element.value
+            .split('\n')
+            .map(key => key.trim())
+            .filter(key => key.length > 0);
     }
 
     async startServer() {
         try {
-            this.setButtonLoading('start-server-btn', true);
+            this.setButtonLoading('quick-start-btn', true);
             
             const response = await fetch('/api/server/start', {
                 method: 'POST'
@@ -218,6 +251,7 @@ class LLMProxyApp {
             if (result.success) {
                 this.showNotification('API服务器启动成功', 'success');
                 this.updateServerButtons(true);
+                this.updateServerStatus({ status: 'running', url: result.url });
             } else {
                 throw new Error(result.error || '启动服务器失败');
             }
@@ -225,13 +259,13 @@ class LLMProxyApp {
             console.error('启动服务器失败:', error);
             this.showNotification('启动服务器失败: ' + error.message, 'error');
         } finally {
-            this.setButtonLoading('start-server-btn', false);
+            this.setButtonLoading('quick-start-btn', false);
         }
     }
 
     async stopServer() {
         try {
-            this.setButtonLoading('stop-server-btn', true);
+            this.setButtonLoading('quick-stop-btn', true);
             
             const response = await fetch('/api/server/stop', {
                 method: 'POST'
@@ -245,6 +279,7 @@ class LLMProxyApp {
             if (result.success) {
                 this.showNotification('API服务器停止成功', 'success');
                 this.updateServerButtons(false);
+                this.updateServerStatus({ status: 'stopped' });
             } else {
                 throw new Error(result.error || '停止服务器失败');
             }
@@ -252,46 +287,61 @@ class LLMProxyApp {
             console.error('停止服务器失败:', error);
             this.showNotification('停止服务器失败: ' + error.message, 'error');
         } finally {
-            this.setButtonLoading('stop-server-btn', false);
+            this.setButtonLoading('quick-stop-btn', false);
         }
     }
 
     updateServerStatus(data) {
         const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
         const apiStatus = document.getElementById('api-status');
         const apiUrl = document.getElementById('api-url');
 
         if (data.status === 'running') {
-            statusIndicator.className = 'badge bg-success';
-            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 服务运行中';
+            if (statusIndicator) statusIndicator.className = 'status-indicator status-running';
+            if (statusText) statusText.textContent = '服务运行中';
             
-            apiStatus.className = 'badge bg-success';
-            apiStatus.textContent = '运行中';
+            if (apiStatus) {
+                apiStatus.className = 'badge bg-success';
+                apiStatus.textContent = '运行中';
+            }
             
-            if (data.url) {
+            if (apiUrl && data.url) {
                 apiUrl.textContent = data.url;
             }
             
             this.updateServerButtons(true);
         } else {
-            statusIndicator.className = 'badge bg-secondary';
-            statusIndicator.innerHTML = '<i class="fas fa-circle"></i> 服务未运行';
+            if (statusIndicator) statusIndicator.className = 'status-indicator status-stopped';
+            if (statusText) statusText.textContent = '服务未运行';
             
-            apiStatus.className = 'badge bg-secondary';
-            apiStatus.textContent = '未运行';
+            if (apiStatus) {
+                apiStatus.className = 'badge bg-secondary';
+                apiStatus.textContent = '未运行';
+            }
             
-            apiUrl.textContent = '-';
+            if (apiUrl) {
+                apiUrl.textContent = '-';
+            }
             
             this.updateServerButtons(false);
         }
     }
 
     updateServerButtons(isRunning) {
-        const startBtn = document.getElementById('start-server-btn');
-        const stopBtn = document.getElementById('stop-server-btn');
+        const quickStartBtn = document.getElementById('quick-start-btn');
+        const quickStopBtn = document.getElementById('quick-stop-btn');
 
-        startBtn.disabled = isRunning;
-        stopBtn.disabled = !isRunning;
+        if (quickStartBtn) quickStartBtn.disabled = isRunning;
+        if (quickStopBtn) quickStopBtn.disabled = !isRunning;
+    }
+
+    updateApiKeyDisplay() {
+        const apiKeyInput = document.getElementById('api-key');
+        const currentApiKey = document.getElementById('current-api-key');
+        if (apiKeyInput && currentApiKey) {
+            currentApiKey.textContent = apiKeyInput.value || '123';
+        }
     }
 
     updateWebUrl() {
@@ -305,11 +355,13 @@ class LLMProxyApp {
 
     setButtonLoading(buttonId, isLoading) {
         const button = document.getElementById(buttonId);
+        if (!button) return;
+        
         if (isLoading) {
             button.disabled = true;
             const originalText = button.innerHTML;
             button.dataset.originalText = originalText;
-            button.innerHTML = '<span class="loading"></span> 处理中...';
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>处理中...';
         } else {
             button.disabled = false;
             if (button.dataset.originalText) {
@@ -320,25 +372,27 @@ class LLMProxyApp {
 
     showNotification(message, type = 'info') {
         const container = document.getElementById('notification-container');
+        if (!container) return;
+        
         const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
 
         container.appendChild(notification);
 
-        // 显示通知
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 100);
-
         // 自动隐藏
         setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
         }, 3000);
     }
 }
@@ -346,11 +400,4 @@ class LLMProxyApp {
 // 页面加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     window.llmProxyApp = new LLMProxyApp();
-});
-
-// 页面卸载时清理资源
-window.addEventListener('beforeunload', () => {
-    if (window.llmProxyApp && window.llmProxyApp.socket) {
-        window.llmProxyApp.socket.disconnect();
-    }
 });

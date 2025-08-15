@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-LLM代理服务 - Web版
-将GUI改为HTML界面，支持热重载更改配置，为迁移到安卓上的termux做准备
+LLM代理服务 - Termux版
+专为Android Termux环境优化的FastAPI版本
 """
 
 import asyncio
@@ -13,7 +13,6 @@ import json
 import time
 import logging
 import configparser
-import threading
 import signal
 import platform
 import socket
@@ -21,31 +20,30 @@ import subprocess
 from pathlib import Path
 from typing import List, Dict, Any
 
-# Termux环境检测
-IS_TERMUX = os.path.exists('/data/data/com.termux/files/usr/bin/bash')
-if IS_TERMUX:
-    print("检测到Termux环境，启用移动端优化配置")
-
-# 尝试导入Flask相关模块
-try:
-    from flask import Flask, render_template, request, jsonify, send_from_directory
-    from flask_cors import CORS
-    from flask_socketio import SocketIO, emit
-    FLASK_AVAILABLE = True
-except ImportError:
-    FLASK_AVAILABLE = False
-
-# 尝试导入FastAPI和Pydantic（用于API代理服务）
+# FastAPI和Pydantic导入
 try:
     from fastapi import FastAPI, Request, HTTPException
-    from fastapi.responses import JSONResponse, StreamingResponse
+    from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.templating import Jinja2Templates
     from pydantic import BaseModel
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
+    print("错误：缺少FastAPI依赖。请运行 'pip install fastapi uvicorn httpx pydantic python-multipart aiofiles'")
+    sys.exit(1)
 
 # ==================== 辅助函数 ====================
+def is_termux_environment() -> bool:
+    """检测是否在Termux环境中运行"""
+    return (
+        'com.termux' in sys.executable or
+        os.path.exists('/data/data/com.termux') or
+        'TERMUX_VERSION' in os.environ or
+        os.path.exists('/system/bin/termux-setup-storage')
+    )
+
 def get_resource_path(relative_path: str) -> str:
     """获取资源的绝对路径，兼容开发环境和PyInstaller打包环境"""
     if getattr(sys, 'frozen', False):
@@ -55,6 +53,32 @@ def get_resource_path(relative_path: str) -> str:
         # 如果是正常的python脚本
         base_path = Path(__file__).parent
     return str(base_path / relative_path)
+
+def check_port_available(host: str, port: int) -> bool:
+    """检查端口是否可用"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex((host, port))
+            return result != 0
+    except Exception:
+        return False
+
+def setup_termux_environment():
+    """设置Termux环境优化"""
+    if not is_termux_environment():
+        return
+    
+    try:
+        # 检查并设置termux-wake-lock以保持服务运行
+        subprocess.run(['termux-wake-lock'], check=False, capture_output=True)
+        logger.info("已启用termux-wake-lock")
+    except FileNotFoundError:
+        logger.warning("termux-wake-lock未找到，服务可能会在后台被系统终止")
+    
+    # 设置环境变量以优化Termux性能
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    os.environ['PYTHONUNBUFFERED'] = '1'
 
 # ==================== 配置管理器 ====================
 class ConfigManager:
@@ -67,21 +91,38 @@ class ConfigManager:
     
     def load_config(self):
         """加载配置文件"""
+        # 清除现有配置
+        self.config.clear()
+        
         if os.path.exists(self.config_file):
-            self.config.read(self.config_file, encoding='utf-8')
+            # 重新读取配置文件，确保获取最新内容
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                self.config.read_file(f)
         else:
             self.create_default_config()
     
     def create_default_config(self):
         """创建默认配置"""
+        # 根据环境设置默认配置
+        if is_termux_environment():
+            default_port = '8080'
+            default_host = '0.0.0.0'
+            default_timeout = '120'  # Termux环境下使用较短的超时时间
+            default_min_length = '300'  # Termux环境下使用较小的最小响应长度
+        else:
+            default_port = '8080'
+            default_host = '127.0.0.1'
+            default_timeout = '180'
+            default_min_length = '400'
+        
         self.config['SERVER'] = {
-            'port': '8080',
-            'host': '0.0.0.0',
+            'port': default_port,
+            'host': default_host,
             'api_key': '123',
-            'min_response_length': '400',
-            'request_timeout': '30',
-            'web_port': '5000',
-            'web_host': '127.0.0.1'
+            'min_response_length': default_min_length,
+            'request_timeout': default_timeout,
+            'web_port': default_port,
+            'web_host': default_host
         }
         
         self.config['API_KEYS'] = {
@@ -111,9 +152,16 @@ class ConfigManager:
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 self.config.write(f)
             logger.info("配置已保存")
+            # 保存后立即重新加载配置，确保内存中的配置是最新的
+            self.load_config()
         except Exception as e:
             logger.error(f"保存配置失败: {e}")
             raise
+    
+    def force_reload_config(self):
+        """强制重新加载配置文件"""
+        logger.info("强制重新加载配置文件")
+        self.load_config()
     
     def get_server_config(self) -> Dict[str, Any]:
         """获取服务器配置"""
@@ -173,24 +221,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 防止休眠的线程
-def keep_alive():
-    """保持服务活跃的线程"""
-    import threading
-    import time
-    
-    def _keep_alive_worker():
-        while True:
-            # 定期记录心跳，防止系统休眠
-            logger.debug("服务心跳 - 保持活跃")
-            time.sleep(30)  # 每30秒记录一次
-    
-    keep_alive_thread = threading.Thread(target=_keep_alive_worker, daemon=True)
-    keep_alive_thread.start()
-
-# 启动保持活跃线程
-keep_alive()
-
 # 全局配置管理器实例
 config_manager = ConfigManager()
 
@@ -209,6 +239,9 @@ if FASTAPI_AVAILABLE:
     def get_current_api_keys():
         """根据轮询机制返回当前应该使用的API密钥组"""
         global current_group_index
+        
+        # 每次获取密钥前都强制重新加载配置，确保获取最新密钥
+        config_manager.force_reload_config()
         api_keys = config_manager.get_api_keys()
         
         if current_group_index == 0:
@@ -219,6 +252,10 @@ if FASTAPI_AVAILABLE:
             current_group_index = 0
         
         valid_keys = [key for key in keys if key and not key.startswith("YOUR_") and len(key) > 10]
+        
+        # 记录当前使用的密钥组信息，便于调试
+        logger.info(f"当前使用密钥组: {'group1' if current_group_index == 1 else 'group2'}, 有效密钥数量: {len(valid_keys)}")
+        
         return valid_keys
 
     async def send_single_request(client: httpx.AsyncClient, api_key: str, request_data: dict):
@@ -503,203 +540,213 @@ if FASTAPI_AVAILABLE:
             logger.error(f"处理聊天完成请求时出错: {e}")
             raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
-    @app_fastapi.get("/")
+    @app_fastapi.get("/api")
     def read_root():
         return {"status": "ok", "message": "LLM代理服务正在运行"}
 
-# ==================== Flask Web界面 (如果可用) ====================
-if FLASK_AVAILABLE:
-    app_flask = Flask(__name__, 
-                     template_folder='templates',
-                     static_folder='static')
-    CORS(app_flask)
-    socketio = SocketIO(app_flask, cors_allowed_origins="*")
-    
-    # 全局变量
-    api_server_thread = None
-    is_api_server_running = False
-    api_server_lock = threading.Lock()
-    
-    @app_flask.route('/')
-    def index():
-        """主页"""
-        return render_template('index.html')
-    
-    @app_flask.route('/test')
-    def test():
-        """测试页面"""
-        return render_template('test.html')
-    
-    @app_flask.route('/api/config', methods=['GET'])
-    def get_config():
-        """获取配置"""
-        try:
-            server_config = config_manager.get_server_config()
-            api_keys = config_manager.get_api_keys()
-            base_url = config_manager.get_base_url()
-            
-            return jsonify({
-                'server': server_config,
-                'api_keys': api_keys,
-                'base_url': base_url
-            })
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app_flask.route('/api/config', methods=['POST'])
-    def save_config():
-        """保存配置"""
-        try:
-            data = request.get_json()
-            
-            # 保存服务器配置
-            if 'server' in data:
-                server = data['server']
-                config_manager.set_server_config(
-                    port=int(server['port']),
-                    host=server['host'],
-                    api_key=server['api_key'],
-                    min_response_length=int(server['min_response_length']),
-                    request_timeout=int(server['request_timeout']),
-                    web_port=int(server['web_port']),
-                    web_host=server['web_host']
-                )
-            
-            # 保存API密钥
-            if 'api_keys' in data:
-                api_keys = data['api_keys']
-                config_manager.set_api_keys(
-                    group1=api_keys['group1'],
-                    group2=api_keys['group2']
-                )
-            
-            # 保存基础URL
-            if 'base_url' in data:
-                config_manager.set_base_url(data['base_url'])
-            
-            return jsonify({'success': True})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    
-    @app_flask.route('/api/server/start', methods=['POST'])
-    def start_api_server():
-        """启动API服务器"""
-        global api_server_thread, is_api_server_running
+# ==================== FastAPI Web界面 ====================
+# 设置静态文件和模板
+app_fastapi.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# 全局变量
+is_api_server_running = True
+
+@app_fastapi.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    """主页"""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app_fastapi.get("/api/config")
+async def get_config():
+    """获取配置"""
+    try:
+        server_config = config_manager.get_server_config()
+        api_keys = config_manager.get_api_keys()
+        base_url = config_manager.get_base_url()
         
-        with api_server_lock:
-            if is_api_server_running:
-                return jsonify({'error': '服务器已在运行中'})
-            
-            if not FASTAPI_AVAILABLE:
-                return jsonify({'error': 'FastAPI不可用，无法启动API服务器'})
-            
-            try:
-                server_config = config_manager.get_server_config()
-                
-                def run_api_server():
-                    try:
-                        from waitress import serve
-                        serve(
-                            app_fastapi,
-                            host=server_config['host'],
-                            port=server_config['port']
-                        )
-                    except Exception as e:
-                        logger.error(f"API服务器运行错误: {e}")
-                        with api_server_lock:
-                            global is_api_server_running
-                            is_api_server_running = False
-                
-                api_server_thread = threading.Thread(target=run_api_server, daemon=True)
-                api_server_thread.start()
-                is_api_server_running = True
-                
-                # 通过SocketIO通知前端
-                socketio.emit('server_status', {
-                    'status': 'running',
-                    'url': f"http://{server_config['host']}:{server_config['port']}"
-                })
-                
-                return jsonify({'success': True})
-            except Exception as e:
-                logger.error(f"启动API服务器失败: {e}")
-                return jsonify({'error': str(e)}), 500
-    
-    @app_flask.route('/api/server/stop', methods=['POST'])
-    def stop_api_server():
-        """停止API服务器"""
-        global is_api_server_running
+        return {
+            'server': server_config,
+            'api_keys': api_keys,
+            'base_url': base_url
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app_fastapi.post("/api/config")
+async def save_config(request: Request):
+    """保存配置"""
+    try:
+        data = await request.json()
         
-        with api_server_lock:
-            if not is_api_server_running:
-                return jsonify({'error': '服务器未运行'})
-            
-            try:
-                # 注意：这里只是简单标记为停止，实际需要更复杂的进程管理
-                is_api_server_running = False
-                
-                # 通过SocketIO通知前端
-                socketio.emit('server_status', {
-                    'status': 'stopped'
-                })
-                
-                return jsonify({'success': True})
-            except Exception as e:
-                logger.error(f"停止API服务器失败: {e}")
-                return jsonify({'error': str(e)}), 500
+        # 保存服务器配置
+        if 'server' in data:
+            server = data['server']
+            config_manager.set_server_config(
+                port=int(server['port']),
+                host=server['host'],
+                api_key=server['api_key'],
+                min_response_length=int(server['min_response_length']),
+                request_timeout=int(server['request_timeout']),
+                web_port=int(server['web_port']),
+                web_host=server['web_host']
+            )
+        
+        # 保存API密钥
+        if 'api_keys' in data:
+            api_keys = data['api_keys']
+            config_manager.set_api_keys(
+                group1=api_keys['group1'],
+                group2=api_keys['group2']
+            )
+        
+        # 保存基础URL
+        if 'base_url' in data:
+            config_manager.set_base_url(data['base_url'])
+        
+        # 返回成功消息，包含配置更新时间戳
+        return {
+            'success': True,
+            'message': '配置已保存并立即生效',
+            'timestamp': int(time.time())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app_fastapi.post("/api/server/start")
+async def start_api_server():
+    """启动API服务器"""
+    global is_api_server_running
     
-    @app_flask.route('/api/server/status', methods=['GET'])
-    def get_server_status():
-        """获取服务器状态"""
-        with api_server_lock:
-            return jsonify({
-                'is_running': is_api_server_running
-            })
+    if is_api_server_running:
+        raise HTTPException(status_code=400, detail='服务器已在运行中')
     
-    @socketio.on('connect')
-    def handle_connect():
-        """客户端连接时的处理"""
-        emit('server_status', {
-            'status': 'running' if is_api_server_running else 'stopped'
-        })
+    try:
+        is_api_server_running = True
+        server_config = config_manager.get_server_config()
+        
+        return {
+            'success': True,
+            'url': f"http://{server_config['host']}:{server_config['port']}"
+        }
+    except Exception as e:
+        logger.error(f"启动API服务器失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app_fastapi.post("/api/server/stop")
+async def stop_api_server():
+    """停止API服务器"""
+    global is_api_server_running
+    
+    if not is_api_server_running:
+        raise HTTPException(status_code=400, detail='服务器未运行')
+    
+    try:
+        is_api_server_running = False
+        return {'success': True}
+    except Exception as e:
+        logger.error(f"停止API服务器失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app_fastapi.get("/api/server/status")
+async def get_server_status():
+    """获取服务器状态"""
+    return {
+        'is_running': is_api_server_running
+    }
 
 # ==================== 主程序入口 ====================
 def main():
-    # 检查命令行参数
-    if len(sys.argv) > 1 and sys.argv[1] == 'cli':
-        if not FASTAPI_AVAILABLE:
-            print("错误：缺少运行命令行服务所需的FastAPI依赖。")
-            print("请运行 'pip install fastapi waitress httpx pydantic python-multipart'")
-            return
-            
-        print("正在以命令行模式启动API服务...")
+    """主程序入口"""
+    print("正在启动LLM代理服务 - Termux版...")
+    
+    # 检测并设置Termux环境
+    is_termux = is_termux_environment()
+    
+    if is_termux:
+        print("检测到Termux环境，进行优化配置...")
+        setup_termux_environment()
+        
+        # 在Termux环境中，使用更保守的配置
         server_config = config_manager.get_server_config()
+        if server_config['host'] == '127.0.0.1':
+            server_config['host'] = '0.0.0.0'
+            config_manager.set_server_config(
+                port=server_config['port'],
+                host=server_config['host'],
+                api_key=server_config['api_key'],
+                min_response_length=server_config['min_response_length'],
+                request_timeout=server_config['request_timeout'],
+                web_port=server_config['web_port'],
+                web_host=server_config['web_host']
+            )
+    
+    server_config = config_manager.get_server_config()
+    
+    # 检查端口是否可用
+    if not check_port_available(server_config['web_host'], server_config['web_port']):
+        print(f"警告: 端口 {server_config['web_port']} 可能已被占用")
+        # 在Termux环境中尝试使用备用端口
+        if is_termux:
+            alternative_port = server_config['web_port'] + 1
+            if check_port_available(server_config['web_host'], alternative_port):
+                print(f"尝试使用备用端口: {alternative_port}")
+                server_config['web_port'] = alternative_port
+                server_config['port'] = alternative_port
+                config_manager.set_server_config(
+                    port=server_config['port'],
+                    host=server_config['host'],
+                    api_key=server_config['api_key'],
+                    min_response_length=server_config['min_response_length'],
+                    request_timeout=server_config['request_timeout'],
+                    web_port=server_config['web_port'],
+                    web_host=server_config['web_host']
+                )
+    
+    # 构建服务URL
+    service_url = f"http://{server_config['web_host']}:{server_config['web_port']}"
+    
+    print(f"服务将运行在: {service_url}")
+    print(f"API端点: {service_url}/v1/chat/completions")
+    print(f"管理界面: {service_url}/")
+    
+    if is_termux:
+        print("Termux环境提示:")
+        print("1. 请确保已允许Termux访问网络权限")
+        print("2. 如需从外部访问，请确保端口转发已正确配置")
+        print("3. 建议使用 'termux-wake-lock' 保持服务运行")
+        print("4. 建议使用 'termux-battery-status' 监控电池状态")
+        print("5. 可以使用 'nohup python app.py &' 在后台运行服务")
+    
+    # 导入uvicorn并启动服务
+    try:
+        import uvicorn
         
-        # 导入waitress
-        try:
-            from waitress import serve
-            serve(app_fastapi, host=server_config['host'], port=server_config['port'])
-        except ImportError:
-            print("错误：缺少waitress依赖。请运行 'pip install waitress'")
-            return
-    else:
-        if not FLASK_AVAILABLE:
-            print("错误：缺少运行Web界面所需的Flask依赖。")
-            print("请运行 'pip install flask flask-cors flask-socketio'")
-            if FASTAPI_AVAILABLE:
-                print("你可以使用 'python app.py cli' 来运行命令行版本。")
-            return
+        # Termux环境特定的uvicorn配置
+        uvicorn_config = {
+            "app": app_fastapi,
+            "host": server_config['web_host'],
+            "port": server_config['web_port'],
+            "log_level": "info",
+            "reload": False,  # 在Termux环境中禁用热重载以提高稳定性
+        }
         
-        print("正在启动Web界面...")
-        server_config = config_manager.get_server_config()
+        if is_termux:
+            # Termux环境下使用更保守的配置
+            uvicorn_config.update({
+                "workers": 1,  # 单工作进程
+                "limit_concurrency": 10,  # 限制并发连接数
+                "timeout_keep_alive": 5,  # 较短的keep-alive超时
+            })
         
-        # 启动Flask应用
-        socketio.run(
-            app_flask,
-            host=server_config['web_host'],
-            port=server_config['web_port'],
-            debug=True  # 启用调试模式，支持热重载
-        )
+        uvicorn.run(**uvicorn_config)
+        
+    except ImportError:
+        print("错误：缺少uvicorn依赖。请运行 'pip install uvicorn'")
+        return
+    except Exception as e:
+        print(f"启动服务失败: {e}")
+        return
 
 if __name__ == "__main__":
     main()

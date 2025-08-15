@@ -1,209 +1,176 @@
-:\Users\lkkkktgf\Desktop\LLM代理服务_Web版\README.md</path>
-# LLM代理服务 - Web版
+# LLM代理服务 - Termux版
 
-这是一个将原始Tkinter GUI界面改为HTML Web界面的LLM代理服务，支持热重载更改配置，为迁移到安卓上的termux做准备。
+## 📱 项目概述
+这是一个专为Android Termux环境优化的LLM代理服务，使用Python + FastAPI + httpx构建。服务可以在安卓手机上运行，提供OpenAI兼容的API接口。
 
-## 功能特性
+## ✨ 主要特性
+- 🚀 **Termux优化**: 专为Android Termux环境深度优化
+- 🌐 **Web管理界面**: 移动端友好的Web管理界面
+- 🔧 **一键安装**: 提供完整的Termux一键安装脚本
+- 📊 **服务管理**: 完整的服务启动、停止、重启功能
+- 📝 **日志管理**: 自动日志轮转和管理
+- 🔄 **自动恢复**: 服务崩溃后自动重启
+- 🛡️ **API密钥管理**: 支持多组API密钥轮询使用
 
-- 🌐 **Web界面**: 现代化的响应式Web界面，替代原来的Tkinter GUI
-- 🔥 **热重载**: 配置更改后自动保存和重载，无需重启服务
-- 📱 **响应式设计**: 支持桌面和移动设备访问
-- ⚡ **实时通信**: 使用Socket.IO实现服务器状态实时更新
-- 🚀 **双服务架构**: Flask Web界面 + FastAPI代理服务
-- 🔄 **API密钥轮询**: 支持多组API密钥自动轮询
-- 📊 **服务监控**: 实时查看API服务状态
+## 📋 系统要求
+- Android 7.0+
+- Termux (建议从F-Droid安装)
+- 至少200MB存储空间
+- 网络连接
 
-## 项目结构
+## 🚀 快速开始
 
-```
-LLM代理服务_Web版/
-├── app.py                 # 主应用文件
-├── requirements.txt       # 依赖包列表
-├── config.ini            # 配置文件（自动生成）
-├── templates/            # HTML模板
-│   └── index.html        # 主页面模板
-├── static/              # 静态文件
-│   ├── css/
-│   │   └── style.css    # 样式文件
-│   └── js/
-│       └── app.js       # 前端JavaScript
-└── README.md            # 说明文档
-```
+### 1. 安装Termux
+从F-Droid或GitHub下载并安装Termux应用。
 
-## 安装和运行
-
-### 1. 安装依赖
-
+### 2. 一键安装
 ```bash
-pip install -r requirements.txt
+# 更新Termux
+pkg update && pkg upgrade -y
+
+# 安装必要工具
+pkg install git curl wget -y
+
+# 克隆项目
+cd ~
+git clone https://github.com/your-repo/LLM代理服务_Web版.git
+cd LLM代理服务_Web版
+
+# 一键安装
+chmod +x install-termux-fixed.sh
+./install-termux-fixed.sh
 ```
 
-### 2. 运行Web界面
-
+### 3. 服务管理
 ```bash
-python app.py
+# 启动服务
+sv up llm-proxy
+
+# 停止服务
+sv down llm-proxy
+
+# 重启服务
+sv restart llm-proxy
+
+# 查看状态
+sv status llm-proxy
 ```
 
-这将启动Flask Web界面，默认访问地址：`http://127.0.0.1:5000`
+## ⚙️ 配置说明
 
-### 3. 命令行模式（可选）
+### 配置文件位置
+- 主配置文件: `config.ini`
+- 日志目录: `~/.llm-proxy/logs/`
 
-如果只需要运行API服务，可以使用：
-
-```bash
-python app.py cli
-```
-
-这将启动FastAPI代理服务，默认地址：`http://0.0.0.0:8080`
-
-## 使用说明
-
-### 基础配置
-
-1. **服务器配置**:
-   - API端口: 代理服务监听端口
-   - API主机: 代理服务监听地址
-   - Web端口: Web界面端口
-   - Web主机: Web界面监听地址
-   - 服务API密钥: 访问代理服务的密钥
-   - 最小响应字符数: 响应内容的最小长度
-   - 请求超时: 请求超时时间（秒）
-   - 基础URL: 上游API的基础URL
-
-2. **API密钥管理**:
-   - 支持两组API密钥，系统会自动轮询使用
-   - 每行一个API密钥
-   - 空行和无效密钥会被自动过滤
-
-### 服务控制
-
-- **启动API服务**: 启动FastAPI代理服务
-- **停止API服务**: 停止代理服务
-- **保存配置**: 保存当前配置到文件
-- **重新加载**: 重新加载配置文件
-
-### 热重载功能
-
-- 配置更改后会自动保存（1秒防抖）
-- 保存成功后会显示通知
-- API服务状态实时更新
-
-## API使用
-
-### 代理端点
-
-```
-POST /v1/chat/completions
-```
-
-### 请求格式
-
-```json
-{
-  "model": "gemini-2.5-flash",
-  "messages": [
-    {"role": "user", "content": "你好"}
-  ],
-  "temperature": 0.7,
-  "max_tokens": 4096,
-  "stream": false
-}
-```
-
-### 认证
-
-在请求头中添加API密钥：
-
-```
-Authorization: Bearer 你的API密钥
-```
-
-## Termux迁移准备
-
-本项目已为迁移到Android Termux做了以下优化：
-
-1. **轻量级依赖**: 使用最小化的依赖包
-2. **兼容性设计**: 代码兼容Python 3.11+
-3. **配置管理**: 使用标准配置文件格式
-4. **网络配置**: 支持不同网络环境配置
-5. **资源管理**: 优化内存和CPU使用
-
-### Termux安装步骤
-
-```bash
-# 在Termux中安装Python
-pkg install python
-
-# 安装依赖
-pip install -r requirements.txt
-
-# 运行应用
-python app.py
-```
-
-## 配置文件说明
-
-配置文件 `config.ini` 包含以下部分：
-
+### 主要配置项
 ```ini
 [SERVER]
-port = 8080
-host = 0.0.0.0
-api_key = 123
-min_response_length = 400
-request_timeout = 30
-web_port = 5000
-web_host = 127.0.0.1
+port = 8080              # 服务端口
+host = 0.0.0.0          # 监听地址
+api_key = 123           # API访问密钥
+min_response_length = 400  # 最小响应长度
+request_timeout = 180   # 请求超时时间
 
 [API_KEYS]
-group1 = ["密钥1", "密钥2", "密钥3", "密钥4"]
-group2 = ["密钥5", "密钥6", "密钥7", "密钥8"]
+group1 = ["YOUR_API_KEY_1", "YOUR_API_KEY_2"]
+group2 = ["YOUR_API_KEY_3", "YOUR_API_KEY_4"]
 
 [API]
 base_url = https://generativelanguage.googleapis.com/v1beta
 ```
 
-## 故障排除
+## 🌐 API使用
+
+### API端点
+- **聊天完成**: `POST /v1/chat/completions`
+- **Web管理界面**: `GET /`
+- **服务状态**: `GET /api`
+
+### 请求示例
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer 123" \
+  -d '{
+    "model": "gemini-pro",
+    "messages": [{"role": "user", "content": "你好"}],
+    "stream": false
+  }'
+```
+
+## 📱 Web管理界面
+访问 `http://localhost:8080` 打开Web管理界面，提供：
+- 服务状态监控
+- 配置文件编辑
+- API密钥管理
+- 日志查看
+- 快速启动/停止服务
+
+## 🔧 故障排除
 
 ### 常见问题
+1. **依赖安装失败**
+   ```bash
+   pip install -r requirements.txt --no-cache-dir
+   ```
 
-1. **端口被占用**:
-   - 修改配置文件中的端口号
-   - 或使用 `netstat -tulpn | grep :端口号` 查看端口使用情况
+2. **端口被占用**
+   - 修改`config.ini`中的端口号
+   - 或使用自动端口检测功能
 
-2. **依赖安装失败**:
-   - 尝试升级pip: `pip install --upgrade pip`
-   - 使用国内镜像: `pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/`
+3. **服务无法启动**
+   ```bash
+   # 查看日志
+   tail -f ~/.llm-proxy/logs/llm-proxy.log
+   
+   # 手动测试
+   python app.py
+   ```
 
-3. **API密钥无效**:
-   - 检查API密钥格式是否正确
-   - 确认API密钥是否有效且未过期
+4. **网络连接问题**
+   ```bash
+   # 配置国内镜像
+   mkdir -p ~/.pip
+   echo "[global]
+   index-url = https://pypi.tuna.tsinghua.edu.cn/simple
+   trusted-host = pypi.tuna.tsinghua.edu.cn" > ~/.pip/pip.conf
+   ```
 
-4. **Web界面无法访问**:
-   - 检查防火墙设置
-   - 确认Web主机配置正确
-   - 检查端口是否被占用
+## 📊 日志管理
+```bash
+# 查看日志
+./termux-services/log-manager.sh view
 
-## 开发说明
+# 清理日志
+./termux-services/log-manager.sh clean
 
-### 添加新功能
+# 查看服务状态
+./termux-services/log-manager.sh status
+```
 
-1. 在 `app.py` 中添加新的API端点
-2. 在 `templates/index.html` 中添加对应的UI元素
-3. 在 `static/js/app.js` 中添加前端交互逻辑
-4. 在 `static/css/style.css` 中添加样式
+## 🔄 更新升级
+```bash
+# 停止服务
+sv down llm-proxy
 
-### 调试模式
+# 更新代码
+git pull
 
-应用默认以调试模式运行，支持：
-- 代码热重载
-- 详细错误信息
-- 自动重启服务
+# 重新安装
+./install-termux-fixed.sh
+```
 
-## 许可证
+## 📞 技术支持
+- 查看日志文件: `~/.llm-proxy/logs/llm-proxy.log`
+- 运行诊断: `./termux-services/log-manager.sh view`
+- 重启服务: `sv restart llm-proxy`
 
-本项目基于原始LLM代理服务修改，遵循相同的许可证。
+## 📄 许可证
+本项目采用MIT许可证。
 
-## 贡献
+## 🤝 贡献
+欢迎提交Issue和Pull Request！
 
-欢迎提交Issue和Pull Request来改进这个项目。
+---
+
+**注意**: 请确保在使用前替换配置文件中的API密钥为您的真实密钥。
