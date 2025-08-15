@@ -139,7 +139,7 @@ start_service() {
         fi
     fi
     
-    # 获取配置端口
+    # 获取配置端口（统一端口配置）
     local port=$(get_config_port)
     
     # 检查端口
@@ -172,6 +172,8 @@ start_service() {
         print_info "端口: $port"
         print_info "日志: $LOG_DIR/llm-proxy.log"
         print_info "访问地址: http://localhost:$port"
+        print_info "管理界面: http://localhost:$port/"
+        print_info "API端点: http://localhost:$port/v1/chat/completions"
         
         # 测试服务响应
         if curl -s "http://localhost:$port/" > /dev/null; then

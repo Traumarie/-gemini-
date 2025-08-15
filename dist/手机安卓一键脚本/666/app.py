@@ -707,9 +707,10 @@ def main():
     
     # 构建服务URL
     service_url = f"http://{server_config['web_host']}:{server_config['web_port']}"
+    api_service_url = f"http://{server_config['host']}:{server_config['port']}"
     
     print(f"服务将运行在: {service_url}")
-    print(f"API端点: {service_url}/v1/chat/completions")
+    print(f"API端点: {api_service_url}/v1/chat/completions")
     print(f"管理界面: {service_url}/")
     
     if is_termux:

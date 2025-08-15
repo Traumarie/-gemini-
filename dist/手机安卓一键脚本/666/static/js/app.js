@@ -201,7 +201,7 @@ class LLMProxyApp {
             server: {
                 port: this.getIntValue('api-port', 8080),
                 host: this.getTextValue('api-host', '0.0.0.0'),
-                web_port: this.getIntValue('api-port', 8080), // 简化：使用相同端口
+                web_port: this.getIntValue('api-port', 8080), // 统一端口配置
                 web_host: this.getTextValue('api-host', '0.0.0.0'),
                 api_key: this.getTextValue('api-key', '123'),
                 min_response_length: this.getIntValue('min-length', 300),
