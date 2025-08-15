@@ -548,8 +548,15 @@ if FASTAPI_AVAILABLE:
 
 # ==================== FastAPI Web界面 ====================
 # 设置静态文件和模板
-app_fastapi.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+static_path = get_resource_path("static")
+templates_path = get_resource_path("templates")
+
+# 确保路径存在
+os.makedirs(static_path, exist_ok=True)
+os.makedirs(templates_path, exist_ok=True)
+
+app_fastapi.mount("/static", StaticFiles(directory=static_path), name="static")
+templates = Jinja2Templates(directory=templates_path)
 
 # 全局变量
 is_api_server_running = True
