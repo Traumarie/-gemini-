@@ -109,11 +109,13 @@ class ConfigManager:
             default_host = '0.0.0.0'
             default_timeout = '120'  # Termux环境下使用较短的超时时间
             default_min_length = '300'  # Termux环境下使用较小的最小响应长度
+            default_web_port = '5000'  # Web界面使用不同端口
         else:
             default_port = '8080'
             default_host = '127.0.0.1'
             default_timeout = '180'
             default_min_length = '400'
+            default_web_port = '8081'  # Web界面使用不同端口
         
         self.config['SERVER'] = {
             'port': default_port,
@@ -121,7 +123,7 @@ class ConfigManager:
             'api_key': '123',
             'min_response_length': default_min_length,
             'request_timeout': default_timeout,
-            'web_port': default_port,
+            'web_port': default_web_port,
             'web_host': default_host
         }
         
@@ -716,7 +718,7 @@ def main():
         print("2. 如需从外部访问，请确保端口转发已正确配置")
         print("3. 建议使用 'termux-wake-lock' 保持服务运行")
         print("4. 建议使用 'termux-battery-status' 监控电池状态")
-        print("5. 可以使用 'nohup python3 app.py &' 在后台运行服务")
+        print("5. 可以使用 'nohup python app.py &' 在后台运行服务")
     
     # 导入uvicorn并启动服务
     try:
