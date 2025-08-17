@@ -119,7 +119,7 @@ get_config_port() {
     if [[ -f "$config_file" ]]; then
         grep -E "^port.*=" "$config_file" | head -1 | sed 's/.*= *//' | tr -d ' '
     else
-        echo "8080"
+        echo "5000"
     fi
 }
 
@@ -287,16 +287,16 @@ show_logs() {
 
 # 显示帮助信息
 show_help() {
-    echo "LLM代理服务 - Termux启动脚本"
+    echo "LLM反截断代理服务 - Termux启动脚本"
     echo
     echo "用法: $0 [命令]"
     echo
     echo "命令:"
     echo "   chmod +x start-termux.sh         首先运行这个"
-    echo "      ./start-termux.sh start       然后再运行这个"
-    echo "  QQ 1033083986"
+    echo "   ./start-termux.sh start       然后再运行这个"
     echo "  https://github.com/adc666sav466/-gemini-"
-    echo "  禁止商用"
+    echo "  若对您有帮助的话，github点点star"
+    echo "  欢迎加入QQ群  1033083986"
     echo "  install        安装依赖"
     echo "  help           显示此帮助信息"
     echo
