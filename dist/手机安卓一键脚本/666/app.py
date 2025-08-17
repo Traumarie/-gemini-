@@ -105,17 +105,17 @@ class ConfigManager:
         """创建默认配置"""
         # 根据环境设置默认配置
         if is_termux_environment():
-            default_port = '8080'
+            default_port = '5000'
             default_host = '0.0.0.0'
             default_timeout = '120'  # Termux环境下使用较短的超时时间
             default_min_length = '300'  # Termux环境下使用较小的最小响应长度
             default_web_port = '5000'  # Web界面使用不同端口
         else:
-            default_port = '8080'
+            default_port = '5000'
             default_host = '127.0.0.1'
             default_timeout = '180'
             default_min_length = '400'
-            default_web_port = '8081'  # Web界面使用不同端口
+            default_web_port = '5000'  # Web界面使用不同端口
         
         self.config['SERVER'] = {
             'port': default_port,
