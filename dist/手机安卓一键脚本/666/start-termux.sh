@@ -302,8 +302,8 @@ show_help() {
     echo
     echo "示例:"
     echo "  $0 start                    # 启动服务"
-    echo "  $0 logs 100                # 查看最近100行日志"
-    echo "  $0 status                  # 查看服务状态"
+    echo "  tail -n 100 /data/data/com.termux/files/home/.llm-proxy/logs/llm-proxy.log               # 查看最近100行日志"
+    echo "  tail -f /data/data/com.termux/files/home/.llm-proxy/logs/llm-proxy.log                 # 查看服务状态"
     echo
 }
 
