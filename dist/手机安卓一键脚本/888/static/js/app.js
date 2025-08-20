@@ -8,19 +8,10 @@ class LLMProxyApp {
     }
 
     init() {
-        try {
-            console.log('初始化LLM代理服务应用...');
-            this.initEventListeners();
-            this.updateWebUrl();
-            this.checkTermuxEnvironment();
-            this.loadConfig();
-            this.loadStats();
-            this.startStatsRefresh();
-            console.log('应用初始化完成');
-        } catch (error) {
-            console.error('应用初始化失败:', error);
-            this.showNotification('应用初始化失败: ' + error.message, 'error');
-        }
+        this.initEventListeners();
+        this.loadConfig();
+        this.updateWebUrl();
+        this.checkTermuxEnvironment();
     }
 
     checkTermuxEnvironment() {
@@ -36,106 +27,46 @@ class LLMProxyApp {
     }
 
     initEventListeners() {
-        try {
-            // 等待DOM完全加载
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    this.bindEvents();
-                });
-            } else {
-                this.bindEvents();
-            }
-        } catch (error) {
-            console.error('事件监听器初始化失败:', error);
-        }
-    }
-
-    bindEvents() {
-        try {
-            // 移动端导航
-            const navButtons = document.querySelectorAll('.nav-btn');
-            console.log('找到导航按钮数量:', navButtons.length);
-            
-            navButtons.forEach((btn, index) => {
-                console.log(`绑定按钮 ${index + 1}:`, btn);
-                if (btn) {
-                    // 移除之前的事件监听器（防止重复绑定）
-                    btn.replaceWith(btn.cloneNode(true));
-                    
-                    // 获取新的按钮引用
-                    const newBtn = document.querySelectorAll('.nav-btn')[index];
-                    if (newBtn) {
-                        newBtn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const tabName = newBtn.dataset.tab;
-                            console.log('点击按钮，切换到标签:', tabName);
-                            if (tabName) {
-                                this.switchTab(tabName);
-                            }
-                        });
-                        
-                        // 添加键盘支持
-                        newBtn.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                const tabName = newBtn.dataset.tab;
-                                if (tabName) {
-                                    this.switchTab(tabName);
-                                }
-                            }
-                        });
-                    }
-                }
+        // 移动端导航
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchTab(btn.dataset.tab);
             });
+        });
 
-            // 按钮事件 - 使用更健壮的选择器
-            this.bindButtonEvent('save-config-btn', () => this.saveConfig());
-            this.bindButtonEvent('reload-config-btn', () => this.loadConfig());
-            this.bindButtonEvent('quick-start-btn', () => this.startServer());
-            this.bindButtonEvent('quick-stop-btn', () => this.stopServer());
-            this.bindButtonEvent('reset-stats-btn', () => this.resetStats());
-
-            // 简化实时配置更新，只在移动端使用
-            this.setupMobileConfigUpdate();
-        } catch (error) {
-            console.error('绑定事件失败:', error);
+        // 按钮事件
+        const saveBtn = document.getElementById('save-config-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.saveConfig();
+            });
         }
-    }
 
-    bindButtonEvent(buttonId, handler) {
-        const button = document.getElementById(buttonId);
-        if (button) {
-            // 移除之前的事件监听器（防止重复绑定）
-            button.replaceWith(button.cloneNode(true));
-            
-            // 获取新的按钮引用
-            const newButton = document.getElementById(buttonId);
-            if (newButton) {
-                newButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (!newButton.disabled) {
-                        handler();
-                    }
-                });
-                
-                // 添加键盘支持
-                newButton.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        if (!newButton.disabled) {
-                            handler();
-                        }
-                    }
-                });
-                
-                console.log(`按钮 ${buttonId} 事件绑定成功`);
-            }
-        } else {
-            console.error(`按钮 ${buttonId} 未找到`);
+        const reloadBtn = document.getElementById('reload-config-btn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => {
+                this.loadConfig();
+            });
         }
+
+        // 快速启动按钮
+        const quickStartBtn = document.getElementById('quick-start-btn');
+        if (quickStartBtn) {
+            quickStartBtn.addEventListener('click', () => {
+                this.startServer();
+            });
+        }
+
+        const quickStopBtn = document.getElementById('quick-stop-btn');
+        if (quickStopBtn) {
+            quickStopBtn.addEventListener('click', () => {
+                this.stopServer();
+            });
+        }
+
+        // 简化实时配置更新，只在移动端使用
+        this.setupMobileConfigUpdate();
     }
 
     setupMobileConfigUpdate() {
@@ -165,47 +96,22 @@ class LLMProxyApp {
     }
 
     async switchTab(tabName) {
-        try {
-            console.log('切换标签页:', tabName);
-            
-            // 更新导航状态
-            const navButtons = document.querySelectorAll('.nav-btn');
-            console.log('导航按钮数量:', navButtons.length);
-            
-            navButtons.forEach(btn => {
-                btn.classList.remove('active');
-                console.log('移除按钮激活状态:', btn);
-            });
-            
-            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-                console.log('激活按钮:', activeBtn);
-            } else {
-                console.error('未找到对应标签的按钮:', tabName);
-            }
+        // 更新导航状态
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
 
-            // 切换内容
-            const tabContents = document.querySelectorAll('.tab-content');
-            console.log('标签页内容数量:', tabContents.length);
-            
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                console.log('隐藏标签页内容:', content);
-            });
-            
-            const targetTab = document.getElementById(`${tabName}-tab`);
-            if (targetTab) {
-                targetTab.classList.add('active');
-                console.log('显示标签页内容:', targetTab);
-                
-                // 滚动到顶部
-                targetTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                console.error('未找到对应标签页内容:', `${tabName}-tab`);
-            }
-        } catch (error) {
-            console.error('切换标签页失败:', error);
+        // 切换内容
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        const targetTab = document.getElementById(`${tabName}-tab`);
+        if (targetTab) {
+            targetTab.classList.add('active');
         }
     }
 
@@ -489,129 +395,9 @@ class LLMProxyApp {
             }
         }, 3000);
     }
-
-    async loadStats() {
-        try {
-            const response = await fetch('/api/stats');
-            if (!response.ok) {
-                throw new Error('加载统计失败');
-            }
-
-            const data = await response.json();
-            this.updateStatsUI(data);
-        } catch (error) {
-            console.error('加载统计失败:', error);
-        }
-    }
-
-    updateStatsUI(data) {
-        if (!data || !data.stats) return;
-
-        const stats = data.stats;
-        
-        // 更新统计数字
-        this.updateElementText('total-requests', stats.total_requests);
-        this.updateElementText('successful-requests', stats.successful_requests);
-        this.updateElementText('failed-requests', stats.failed_requests);
-        this.updateElementText('truncated-requests', stats.truncated_requests);
-        this.updateElementText('rate-limited-requests', stats.rate_limited_requests);
-        this.updateElementText('timeout-requests', stats.timeout_requests);
-        
-        // 更新成功率
-        this.updateElementText('success-rate', data.success_rate + '%');
-        
-        // 更新进度条
-        const successBar = document.getElementById('success-rate-bar');
-        if (successBar) {
-            successBar.style.width = data.success_rate + '%';
-            successBar.textContent = data.success_rate + '%';
-        }
-    }
-
-    updateElementText(elementId, text) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = text;
-        }
-    }
-
-    startStatsRefresh() {
-        // 每5秒刷新一次统计信息
-        setInterval(() => {
-            this.loadStats();
-        }, 5000);
-    }
-
-    async resetStats() {
-        try {
-            const response = await fetch('/api/stats/reset', {
-                method: 'POST'
-            });
-
-            if (!response.ok) {
-                throw new Error('重置统计失败');
-            }
-
-            const result = await response.json();
-            if (result.success) {
-                this.showNotification('统计信息已重置', 'success');
-                this.loadStats(); // 立即刷新显示
-            }
-        } catch (error) {
-            console.error('重置统计失败:', error);
-            this.showNotification('重置统计失败: ' + error.message, 'error');
-        }
-    }
 }
-
-// 扩展updateServerButtons方法以同步快速启动和停止按钮的状态
-document.addEventListener('DOMContentLoaded', function() {
-    // 保存原始方法
-    const originalUpdateServerButtons = LLMProxyApp.prototype.updateServerButtons;
-    
-    // 扩展方法
-    LLMProxyApp.prototype.updateServerButtons = function(isRunning) {
-        // 调用原始方法
-        originalUpdateServerButtons.call(this, isRunning);
-        
-        // 同步快速启动和停止按钮的状态
-        const quickStartBtn = document.getElementById('quick-start-btn');
-        const quickStopBtn = document.getElementById('quick-stop-btn');
-        
-        if (quickStartBtn) quickStartBtn.disabled = isRunning;
-        if (quickStopBtn) quickStopBtn.disabled = !isRunning;
-    };
-});
 
 // 页面加载完成后初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-    try {
-        console.log('DOM已加载，初始化应用...');
-        
-        // 确保所有依赖项都可用
-        if (typeof fetch === 'undefined') {
-            console.error('Fetch API不可用');
-            return;
-        }
-        
-        window.llmProxyApp = new LLMProxyApp();
-        console.log('应用初始化成功');
-    } catch (error) {
-        console.error('应用初始化失败:', error);
-    }
-});
-
-// 添加全局错误处理
-window.addEventListener('error', (event) => {
-    console.error('全局错误:', {
-        message: event.message,
-        filename: event.filename,
-        lineno: event.lineno,
-        colno: event.colno,
-        error: event.error
-    });
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-    console.error('未处理的Promise拒绝:', event.reason);
+    window.llmProxyApp = new LLMProxyApp();
 });

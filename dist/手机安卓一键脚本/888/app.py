@@ -226,18 +226,6 @@ logger = logging.getLogger(__name__)
 # 全局配置管理器实例
 config_manager = ConfigManager()
 
-# 请求统计
-request_stats = {
-    'total_requests': 0,
-    'successful_requests': 0,
-    'failed_requests': 0,
-    'truncated_requests': 0,
-    'rate_limited_requests': 0,
-    'not_found_requests': 0,
-    'timeout_requests': 0,
-    'last_updated': time.time()
-}
-
 # ==================== FastAPI服务 (如果可用) ====================
 if FASTAPI_AVAILABLE:
     class ChatRequest(BaseModel):
@@ -274,10 +262,6 @@ if FASTAPI_AVAILABLE:
 
     async def send_single_request(client: httpx.AsyncClient, api_key: str, request_data: dict):
         """使用单个API密钥发送请求"""
-        global request_stats
-        
-        request_stats['total_requests'] += 1
-        
         cleaned_data = {}
         supported_params = {
             'model', 'messages', 'temperature', 'max_tokens',
@@ -332,13 +316,6 @@ if FASTAPI_AVAILABLE:
                             continue
                 
                 if content:
-                    # 检查是否被截断
-                    if len(content) < config_manager.get_server_config()['min_response_length']:
-                        request_stats['truncated_requests'] += 1
-                    
-                    request_stats['successful_requests'] += 1
-                    request_stats['last_updated'] = time.time()
-                    
                     return {
                         "id": final_id or "chatcmpl-" + str(int(time.time())),
                         "object": "chat.completion",
@@ -358,51 +335,15 @@ if FASTAPI_AVAILABLE:
                     }
             
             try:
-                result = response.json()
-                if result and "choices" in result and result["choices"]:
-                    message_content = result["choices"][0].get("message", {}).get("content", "")
-                    if len(message_content) < config_manager.get_server_config()['min_response_length']:
-                        request_stats['truncated_requests'] += 1
-                
-                request_stats['successful_requests'] += 1
-                request_stats['last_updated'] = time.time()
-                return result
-                
+                return response.json()
             except ValueError as e:
                 logger.error(f"JSON解析错误: {e}")
-                request_stats['failed_requests'] += 1
-                request_stats['last_updated'] = time.time()
                 return None
                 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                request_stats['rate_limited_requests'] += 1
-                logger.error(f"请求被限流: {e}")
-            elif e.response.status_code == 404:
-                request_stats['not_found_requests'] += 1
-                logger.error(f"请求404错误: {e}")
-            else:
-                request_stats['failed_requests'] += 1
-                logger.error(f"HTTP错误: {e}")
-            request_stats['last_updated'] = time.time()
-            return None
-            
         except httpx.RequestError as e:
-            request_stats['failed_requests'] += 1
-            request_stats['last_updated'] = time.time()
             logger.error(f"请求错误: {e}")
             return None
-            
-        except asyncio.TimeoutError:
-            request_stats['timeout_requests'] += 1
-            request_stats['failed_requests'] += 1
-            request_stats['last_updated'] = time.time()
-            logger.error(f"请求超时: {e}")
-            return None
-            
         except Exception as e:
-            request_stats['failed_requests'] += 1
-            request_stats['last_updated'] = time.time()
             logger.error(f"未知错误: {e}")
             return None
 
@@ -722,32 +663,6 @@ async def get_server_status():
     return {
         'is_running': is_api_server_running
     }
-
-@app_fastapi.get("/api/stats")
-async def get_request_stats():
-    """获取请求统计信息"""
-    return {
-        'stats': request_stats,
-        'success_rate': round((request_stats['successful_requests'] / max(request_stats['total_requests'], 1)) * 100, 2),
-        'failure_rate': round((request_stats['failed_requests'] / max(request_stats['total_requests'], 1)) * 100, 2),
-        'truncation_rate': round((request_stats['truncated_requests'] / max(request_stats['total_requests'], 1)) * 100, 2)
-    }
-
-@app_fastapi.post("/api/stats/reset")
-async def reset_request_stats():
-    """重置请求统计信息"""
-    global request_stats
-    request_stats = {
-        'total_requests': 0,
-        'successful_requests': 0,
-        'failed_requests': 0,
-        'truncated_requests': 0,
-        'rate_limited_requests': 0,
-        'not_found_requests': 0,
-        'timeout_requests': 0,
-        'last_updated': time.time()
-    }
-    return {'success': True, 'message': '统计信息已重置'}
 
 # ==================== 主程序入口 ====================
 def main():

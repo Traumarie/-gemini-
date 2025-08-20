@@ -99,40 +99,18 @@ class LLMProxyApp {
     }
 
     bindEvents() {
-        // 移动端导航
-        const navButtons = document.querySelectorAll('.nav-btn');
-        console.log('找到导航按钮数量:', navButtons.length);
-        
-        navButtons.forEach((btn, index) => {
-            console.log(`绑定按钮 ${index + 1}:`, btn);
-            if (btn) {
-                // 移除之前的事件监听器（防止重复绑定）
-                btn.replaceWith(btn.cloneNode(true));
-                
-                // 获取新的按钮引用
-                const newBtn = document.querySelectorAll('.nav-btn')[index];
-                if (newBtn) {
-                    newBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const tabName = newBtn.dataset.tab;
-                        console.log('点击按钮，切换到标签:', tabName);
-                        if (tabName) {
-                            this.switchTab(tabName);
-                        }
-                    });
-                    
-                    // 添加键盘支持
-                    newBtn.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            const tabName = newBtn.dataset.tab;
-                            if (tabName) {
-                                this.switchTab(tabName);
-                            }
-                        }
-                    });
-                }
+        // 侧边栏导航
+        const navLinks = document.querySelectorAll('.sidebar .nav-link');
+        navLinks.forEach(link => {
+            if (link) {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const tabName = link.dataset.tab;
+                    if (tabName) {
+                        this.switchTab(tabName);
+                    }
+                });
             }
         });
 
@@ -205,43 +183,22 @@ class LLMProxyApp {
 
     async switchTab(tabName) {
         try {
-            console.log('切换标签页:', tabName);
-            
             // 更新导航状态
-            const navButtons = document.querySelectorAll('.nav-btn');
-            console.log('导航按钮数量:', navButtons.length);
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(link => link.classList.remove('active'));
             
-            navButtons.forEach(btn => {
-                btn.classList.remove('active');
-                console.log('移除按钮激活状态:', btn);
-            });
-            
-            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-                console.log('激活按钮:', activeBtn);
-            } else {
-                console.error('未找到对应标签的按钮:', tabName);
+            const activeLink = document.querySelector(`[data-tab="${tabName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
             }
 
             // 切换内容
             const tabContents = document.querySelectorAll('.tab-content');
-            console.log('标签页内容数量:', tabContents.length);
-            
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                console.log('隐藏标签页内容:', content);
-            });
+            tabContents.forEach(content => content.classList.remove('active'));
             
             const targetTab = document.getElementById(`${tabName}-tab`);
             if (targetTab) {
                 targetTab.classList.add('active');
-                console.log('显示标签页内容:', targetTab);
-                
-                // 滚动到顶部
-                targetTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                console.error('未找到对应标签页内容:', `${tabName}-tab`);
             }
         } catch (error) {
             console.error('切换标签页失败:', error);
