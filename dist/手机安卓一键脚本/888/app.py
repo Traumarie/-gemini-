@@ -34,26 +34,6 @@ except ImportError:
     print("错误：缺少FastAPI依赖。请运行 'pip install fastapi uvicorn httpx pydantic python-multipart aiofiles'")
     sys.exit(1)
 
-# 导入监控模块
-try:
-    from monitor import monitor
-    MONITOR_AVAILABLE = True
-except ImportError:
-    MONITOR_AVAILABLE = False
-    print("警告：监控模块未找到，监控功能将不可用")
-    class MockMonitor:
-        async def record_request(self, *args, **kwargs):
-            pass
-        async def get_stats(self):
-            return {}
-        async def get_recent_logs(self, *args, **kwargs):
-            return []
-        async def get_error_details(self, *args, **kwargs):
-            return []
-        async def reset_stats(self):
-            return {"success": True}
-    monitor = MockMonitor()
-
 # ==================== 辅助函数 ====================
 def is_termux_environment() -> bool:
     """检测是否在Termux环境中运行"""
@@ -298,7 +278,6 @@ if FASTAPI_AVAILABLE:
         }
         
         url = f"{config_manager.get_base_url()}/openai/chat/completions"
-        start_time = time.time()
         
         try:
             response = await client.post(url, headers=headers, json=cleaned_data,
@@ -306,7 +285,6 @@ if FASTAPI_AVAILABLE:
             response.raise_for_status()
             
             response_text = response.text
-            response_time = time.time() - start_time
             
             if "data:" in response_text:
                 lines = response_text.strip().split('\n')
@@ -338,7 +316,7 @@ if FASTAPI_AVAILABLE:
                             continue
                 
                 if content:
-                    result = {
+                    return {
                         "id": final_id or "chatcmpl-" + str(int(time.time())),
                         "object": "chat.completion",
                         "created": final_created,
@@ -355,74 +333,17 @@ if FASTAPI_AVAILABLE:
                         ],
                         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
                     }
-                    
-                    # 记录监控数据
-                    await monitor.record_request(
-                        api_key=api_key,
-                        status_code=response.status_code,
-                        response_time=response_time,
-                        response_length=len(content),
-                        min_length=config_manager.get_server_config()['min_response_length']
-                    )
-                    
-                    return result
             
             try:
-                result = response.json()
-                response_time = time.time() - start_time
-                
-                # 记录监控数据
-                content_length = 0
-                if "choices" in result and result["choices"]:
-                    content_length = len(result["choices"][0].get("message", {}).get("content", ""))
-                
-                await monitor.record_request(
-                    api_key=api_key,
-                    status_code=response.status_code,
-                    response_time=response_time,
-                    response_length=content_length,
-                    min_length=config_manager.get_server_config()['min_response_length']
-                )
-                
-                return result
+                return response.json()
             except ValueError as e:
                 logger.error(f"JSON解析错误: {e}")
-                await monitor.record_request(
-                    api_key=api_key,
-                    status_code=500,
-                    response_time=time.time() - start_time,
-                    error_msg=f"JSON解析错误: {e}"
-                )
                 return None
                 
-        except httpx.HTTPStatusError as e:
-            response_time = time.time() - start_time
-            await monitor.record_request(
-                api_key=api_key,
-                status_code=e.response.status_code,
-                response_time=response_time,
-                error_msg=str(e)
-            )
-            logger.error(f"HTTP错误 {e.response.status_code}: {e}")
-            return None
         except httpx.RequestError as e:
-            response_time = time.time() - start_time
-            await monitor.record_request(
-                api_key=api_key,
-                status_code=0,  # 网络错误
-                response_time=response_time,
-                error_msg=str(e)
-            )
             logger.error(f"请求错误: {e}")
             return None
         except Exception as e:
-            response_time = time.time() - start_time
-            await monitor.record_request(
-                api_key=api_key,
-                status_code=500,
-                response_time=response_time,
-                error_msg=str(e)
-            )
             logger.error(f"未知错误: {e}")
             return None
 
@@ -742,37 +663,6 @@ async def get_server_status():
     return {
         'is_running': is_api_server_running
     }
-
-@app_fastapi.get("/api/monitor/stats")
-async def get_monitor_stats():
-    """获取监控统计信息"""
-    try:
-        stats = await monitor.get_stats()
-        return {"success": True, "data": stats}
-    except Exception as e:
-        logger.error(f"获取监控统计失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app_fastapi.get("/api/monitor/logs")
-async def get_monitor_logs(limit: int = 50):
-    """获取监控日志"""
-    try:
-        logs = await monitor.get_recent_logs(limit)
-        errors = await monitor.get_error_details(20)
-        return {"success": True, "logs": logs, "errors": errors}
-    except Exception as e:
-        logger.error(f"获取监控日志失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app_fastapi.post("/api/monitor/reset")
-async def reset_monitor():
-    """重置监控统计"""
-    try:
-        result = await monitor.reset_stats()
-        return result
-    except Exception as e:
-        logger.error(f"重置监控统计失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== 主程序入口 ====================
 def main():
